@@ -1,7 +1,11 @@
 
 疑问：
 1.什么是chirp？
+https://zhuanlan.zhihu.com/p/77474295
+
 2.PRT num?
+3.距离维FFT
+
 
 数据说明：
 

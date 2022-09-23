@@ -69,21 +69,46 @@ else
     % create column for each chirp
     LVDS = reshape(LVDS, numADCSamples*numRX, numChirps);
     %each row is data from one chirp
-    LVDS = LVDS.';      % size:(2048*800)
+    LVDS = LVDS.';      % size:(2048*800), 2048个Chirps, 每个Chirps有200*4(Ch)个数据
 end
 
 %% 重组数据
 adcData = zeros(numRX,numChirps*numADCSamples);     % size:(4*409600)
-for row = 1:numRX
-    for i = 1: numChirps
+for row = 1:numRX           % 填充行
+    for i = 1: numChirps    % 填充列
+        % adcData每次填充200个数据：1-200, 201-400...
+        % LVDS每行的数据：1-200, 201-400, 401-600, 601-800
         adcData(row, (i-1)*numADCSamples+1:i*numADCSamples) = LVDS(i, (row-1)*numADCSamples+1:row*numADCSamples);
     end
 end
 
-retVal= reshape(adcData(1, :), numADCSamples, numChirps); %取第二个接收天线数据，数据存储方式为一个chirp一列
+% 200*2048
+retVal = reshape(adcData(1, :), numADCSamples, numChirps); %取第二?个接收天线数据，数据存储方式为一个chirp一列
 
-process_adc=zeros(numADCSamples,numChirps/2);
+% 200*1024, 为什么只取一半数据, 就是第二个接收天线数据?
+process_adc = zeros(numADCSamples, numChirps/2);
 
 for nchirp = 1:2:numChirps  %1T4R 
     process_adc(:, (nchirp-1)/2+1) = retVal(:,nchirp);
 end
+
+%% 距离维FFT（1个chirp)
+figure;
+plot((1:numADCSamples)*detaR, db(abs(fft(process_adc(:,1)))));
+xlabel('距离（m）');
+ylabel('幅度(dB)');
+title('Fig.1.距离维FFT（1个chirp）');
+
+figure;
+plot(db(abs(fft(process_adc(:,1)))))
+xlabel('样点数');
+ylabel('幅度(dB)');
+title('Fig.2.距离维FFT（1个chirp）');
+
+%% 相位解缠绕部分
+RangFFT = 256;
+fft_data_last = zeros(1,RangFFT); 
+range_max = 0;
+adcdata = process_adc;
+numChirps = size(adcdata, 2);
+
