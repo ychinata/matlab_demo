@@ -24,7 +24,7 @@ c = 3*1e8;              % 光速
 ts = numADCSamples/Fs;  % ADC采样时间
 slope = 70e12;          % 调频斜率，这么高？
 B_valid = ts*slope;     % 有效带宽
-detaR = c/(2*B_valid);  % 距离分辨率
+delta_R = c/(2*B_valid);  % 距离分辨率
 
 %% 读取Bin文件
 Filename = 'data/data_one_1p5m_comm/one_1.5m_common_1.bin';    %文件名 用户需要按照自己的文件名修改
@@ -94,7 +94,7 @@ end
 
 %% 距离维FFT（1个chirp)
 figure;
-plot((1:numADCSamples)*detaR, db(abs(fft(process_adc(:,1)))));
+plot((1:numADCSamples)*delta_R, db(abs(fft(process_adc(:,1)))));
 xlabel('距离（m）');
 ylabel('幅度(dB)');
 title('Fig.1.距离维FFT（1个chirp）');
@@ -106,9 +106,42 @@ ylabel('幅度(dB)');
 title('Fig.2.距离维FFT（1个chirp）');
 
 %% 相位解缠绕部分
-RangFFT = 256;
-fft_data_last = zeros(1,RangFFT); 
+RangFFT = 256;      % 距离维FFT点数
+fft_data_last = zeros(1, RangFFT); 
 range_max = 0;
 adcdata = process_adc;
-numChirps = size(adcdata, 2);
+numChirps = size(adcdata, 2);   % 1024
 
+%% 距离维FFT
+fft_data = fft(adcdata, RangFFT); 
+fft_data = fft_data.';
+
+for ii=1:numChirps-1                % 滑动对消，少了一个脉冲
+     fft_data(ii,:) = fft_data(ii+1,:)-fft_data(ii,:);
+end
+
+fft_data_abs = abs(fft_data);
+fft_data_abs(:,1:10)=0; %去除直流分量, 为什么是1:10?
+
+real_data = real(fft_data);
+imag_data = imag(fft_data);
+
+for i = 1 : numChirps
+    for j = 1 : RangFFT  %对每一个距离点取相位 extract phase
+        angle_fft(i,j) = atan2(imag_data(i, j),real_data(i, j));
+    end
+end
+
+% Range-bin tracking 找出能量最大的点，即人体的位置  
+for j = 1:RangFFT
+    if((j*delta_R) < 2.5 && (j*delta_R) > 0.5) % 限定检测距离0.5-1m, 是否需要根据数据进行修改?
+        for i = 1 : numChirps % 进行非相干积累
+            fft_data_last(j) = fft_data_last(j) + fft_data_abs(i,j);
+        end
+        
+        if (fft_data_last(j) > range_max)
+            range_max = fft_data_last(j);
+            max_num = j;  
+        end
+    end
+end 

@@ -2,9 +2,10 @@
 疑问：
 1.什么是chirp？
 https://zhuanlan.zhihu.com/p/77474295
-
 2.PRT num?
-3.距离维FFT
+3.距离维FFT？
+4.去除直流分量？
+5.非相干积累？
 
 
 数据说明：
