@@ -93,6 +93,7 @@ for nchirp = 1:2:numChirps  %1T4R
 end
 
 %% 距离维FFT（1个chirp)
+%{
 figure;
 plot((1:numADCSamples)*delta_R, db(abs(fft(process_adc(:,1)))));
 xlabel('距离（m）');
@@ -104,38 +105,43 @@ plot(db(abs(fft(process_adc(:,1)))))
 xlabel('样点数');
 ylabel('幅度(dB)');
 title('Fig.2.距离维FFT（1个chirp）');
-
+%}
 %% 相位解缠绕部分
 RangFFT = 256;      % 距离维FFT点数
 fft_data_last = zeros(1, RangFFT); 
 range_max = 0;
-adcdata = process_adc;
+adcdata = process_adc;          % 建议换个变量名
 numChirps = size(adcdata, 2);   % 1024
 
 %% 距离维FFT
-fft_data = fft(adcdata, RangFFT); 
-fft_data = fft_data.';
 
-for ii=1:numChirps-1                % 滑动对消，少了一个脉冲
+fft_data = fft(adcdata, RangFFT);   % 200*1024, 256->256*1024
+fft_data = fft_data.';              % 1024*256
+
+for ii = 1 : numChirps-1            % 滑动对消，少了一个脉冲。但fft_data维度不变
      fft_data(ii,:) = fft_data(ii+1,:)-fft_data(ii,:);
 end
 
 fft_data_abs = abs(fft_data);
-fft_data_abs(:,1:10)=0; %去除直流分量, 为什么是1:10?
+fft_data_abs(:,1:10) = 0;           % 去除直流分量, 为什么是1:10?
 
 real_data = real(fft_data);
 imag_data = imag(fft_data);
 
+%% 找出能量最大点的相位  extract phase from selected range bin
+angle_fft = zeros(size(fft_data));  % 1024*256
 for i = 1 : numChirps
-    for j = 1 : RangFFT  %对每一个距离点取相位 extract phase
-        angle_fft(i,j) = atan2(imag_data(i, j),real_data(i, j));
+    for j = 1 : RangFFT             % 对每一个距离点取相位 extract phase
+        angle_fft(i,j) = atan2(imag_data(i, j),real_data(i, j));    % atan2四象限反正切
     end
 end
 
-% Range-bin tracking 找出能量最大的点，即人体的位置  
-for j = 1:RangFFT
-    if((j*delta_R) < 2.5 && (j*delta_R) > 0.5) % 限定检测距离0.5-1m, 是否需要根据数据进行修改?
-        for i = 1 : numChirps % 进行非相干积累
+
+% Range-bin tracking 找出能量最大的点，即人体的位置
+for j = 1 : RangFFT
+    % j*delta_R表示什么？
+    if ((j*delta_R) < 2.5 && (j*delta_R) > 0.5) % 限定检测距离0.5-1m, 是否需要根据数据进行修改?
+        for i = 1 : numChirps                   % 进行非相干积累
             fft_data_last(j) = fft_data_last(j) + fft_data_abs(i,j);
         end
         
@@ -144,4 +150,68 @@ for j = 1:RangFFT
             max_num = j;  
         end
     end
+end
+
+% 取出能量最大点的相位
+angle_fft_last = angle_fft(:,max_num);
+
+%% 进行相位解缠  
+% phase unwrapping(手动解)，自动解可以采用MATLAB自带的函数unwrap()
+n = 1;
+for i = 1+1 : numChirps
+    diff = angle_fft_last(i) - angle_fft_last(i-1);
+    if diff > pi
+        angle_fft_last(i:end) = angle_fft_last(i:end) - 2*pi;
+        n = n + 1;
+    elseif diff < -pi
+        angle_fft_last(i:end) = angle_fft_last(i:end) + 2*pi;  
+    end
+end
+
+%% phase difference 相位差分后的数据
+angle_fft_last2 = zeros(1,numChirps);       % rename: angle_fft_diff
+for i = 1 : numChirps-1
+    angle_fft_last2(i) = angle_fft_last(i+1) - angle_fft_last(i);
+    angle_fft_last2(numChirps) = angle_fft_last(numChirps) - angle_fft_last(numChirps-1);
 end 
+
+figure;
+plot(angle_fft_last2);
+xlabel('点数（N）');
+ylabel('相位');
+title('Fig.3.相位差分后的结果');
+
+%%  IIR带通滤波 Bandpass Filter 0.1-0.6hz，得到呼吸的数据
+fs = 20;                %呼吸心跳信号采样率
+COE1 = chebyshev_IIR;   %采用fdatool生成函数，如何生成?
+save coe1.mat COE1;
+breath_data = filter(COE1, angle_fft_last2); 
+
+figure;
+plot(breath_data);
+xlabel('时间/点数');
+ylabel('幅度');
+title('Fig.4.呼吸时域波形');
+
+%% 谱估计 -FFT -Peak interval
+N1 = length(breath_data);
+fshift = (-N1/2:N1/2-1) * (fs/N1);                      % zero-centered frequency
+breath_data_freq = abs(fftshift(fft(breath_data)));     % FFT
+
+figure;
+plot(fshift,breath_data_freq);
+xlabel('频率（f/Hz）');
+ylabel('幅度');
+title('Fig.5.呼吸信号FFT');
+
+breath_freq_max = 0;                        % 呼吸频率
+for i = 1:length(breath_data_freq)          % 谱峰最大值搜索
+    if (breath_data_freq(i) > breath_freq_max)    
+        breath_freq_max = breath_data_freq(i);
+        breath_index = i;
+    end
+end
+
+breath_count =(fs * (numChirps/2 - (breath_index-1)) / numChirps) * 60; %呼吸频率解算，原理？
+
+

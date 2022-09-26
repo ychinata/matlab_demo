@@ -236,10 +236,10 @@ heart_count =(fs*(numChirps/2-(heart_index-1))/numChirps)*60;%心跳频率解算
 % 如果数据长度够长，则雷达会51.2s对呼吸数据和心跳数据进行一次刷新，
 %以便实现更为精确的检测。
 
-disp(['呼吸：',num2str(breath_count),'  心跳：',num2str(heart_count)])
+disp(['呼吸：',num2str(breath_count), '心跳：',num2str(heart_count)])
 
 %% 动画演示
-%读者自行开发
+% 读者自行开发
 
 %% END &thank YOU !
 
