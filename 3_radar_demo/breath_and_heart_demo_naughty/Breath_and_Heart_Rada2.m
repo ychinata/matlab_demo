@@ -25,7 +25,7 @@ B_valid = ts*slope;     % 有效带宽
 detaR = c/(2*B_valid);  % 距离分辨率
 
 %% 读取Bin文件
-Filename = 'one_1.5m_common_1.bin';  %文件名 用户需要按照自己的文件名修改
+Filename = 'data/data_one_1p5m_comm/one_1.5m_common_1.bin';  %文件名 用户需要按照自己的文件名修改
 fid = fopen(Filename,'r');
 adcDataRow = fread(fid, 'int16');
 if numADCBits ~= 16

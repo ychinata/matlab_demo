@@ -185,7 +185,7 @@ title('Fig.3.相位差分后的结果');
 fs = 20;                %呼吸心跳信号采样率
 COE1 = chebyshev_IIR;   %采用fdatool生成函数，如何生成?
 save coe1.mat COE1;
-breath_data = filter(COE1, angle_fft_last2); 
+breath_data = filter(COE1, angle_fft_last2);
 
 figure;
 plot(breath_data);
@@ -194,24 +194,38 @@ ylabel('幅度');
 title('Fig.4.呼吸时域波形');
 
 %% 谱估计 -FFT -Peak interval
-N1 = length(breath_data);
+N1 = length(breath_data);                               % 1024
 fshift = (-N1/2:N1/2-1) * (fs/N1);                      % zero-centered frequency
-breath_data_freq = abs(fftshift(fft(breath_data)));     % FFT
+breath_data_freq = abs(fftshift(fft(breath_data)));     % FFT, 为什么又做一次fft?
 
 figure;
-plot(fshift,breath_data_freq);
+% subplot(2,1,1)
+plot(fshift, breath_data_freq);
 xlabel('频率（f/Hz）');
 ylabel('幅度');
-title('Fig.5.呼吸信号FFT');
+title('Fig.5.呼吸信号FFT with shift');
+
+% 不进行fftshift
+% fnoshift = (0:N1-1) * (fs/N1);
+% breath_data_freq_noshift = abs(fft(breath_data));     % FFT, 为什么又做一次fft?
+% subplot(2,1,2)
+% plot(fnoshift, breath_data_freq_noshift);
+% xlabel('频率（f/Hz）');
+% ylabel('幅度');
+% title('Fig.5.呼吸信号FFT without shift');
 
 breath_freq_max = 0;                        % 呼吸频率
-for i = 1:length(breath_data_freq)          % 谱峰最大值搜索
-    if (breath_data_freq(i) > breath_freq_max)    
+for i = 1:length(breath_data_freq)          % 谱峰最大值搜索,1024点
+    if (breath_data_freq(i) > breath_freq_max)
         breath_freq_max = breath_data_freq(i);
         breath_index = i;
     end
 end
 
-breath_count =(fs * (numChirps/2 - (breath_index-1)) / numChirps) * 60; %呼吸频率解算，原理？
+% 这句就可以实现上述的谱峰最大值搜索
+% [breath_freq_max, breath_index] = max(breath_data_freq);
 
+
+breath_count =(fs * (numChirps/2 - (breath_index-1)) / numChirps) * 60; %呼吸频率解算，原理？
+disp(['呼吸：',num2str(breath_count)])
 
