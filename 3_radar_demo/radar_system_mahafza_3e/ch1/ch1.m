@@ -48,4 +48,22 @@ tau = 2 * delta_R / c;
 % show
 fprintf('PRF=%g Hz, PRI=%g ms, Delta_R=%g m, tau=%g us\n', prf, pri*1e3, delta_R, tau*1e6)     % 显示更为紧凑
 
+%% example.1.5
+% 2022.9.30
+lambda = 0.03;
+freq = c / lambda;
+ang = 0;                % 角度
+v_radar = 250;
+v_target = 175;
+
+% 靠近目标
+tv = v_radar + v_target;
+[fd, ~] = doppler_freq (freq, ang, tv); %% 输入1
+fprintf('f_d=%g kHz\n', fd/1e3);
+
+% 远离目标
+tv = v_radar - v_target;
+[fd, ~] = doppler_freq (freq, ang, tv); %% 输入2
+fprintf('f_d=%g kHz\n', fd/1e3);
+
 
