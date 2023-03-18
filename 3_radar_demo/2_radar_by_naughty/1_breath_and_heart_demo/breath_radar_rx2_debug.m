@@ -6,10 +6,27 @@
 % Review: 2022.9.18
 % ========================================================================
 
+%% ========================================================================
+% （1）Range FFT（距离维FFT） 
+% （2）Range bin tracking（距离门锁定）
+% （3）Extract Phase（相位提取）
+% （4）Phase Unwrapping（相位解缠绕）
+% （5）Phase Difference （相位差分）
+% （6）Bandpass Filtering （带通滤波器）
+% （7）Spectral Estimation（谱估计）
+% （8）Decision（判决）
+% （9）频谱进行分割
+% （10）心跳/呼吸频率计算
+
+%% ========================================================================
+% 疑问：
+% I/Q两路数据
+
+%% ========================================================================
 clc;
 clear all;
 close all;
-%% =========================================================================
+
 %% 读取数据部分
 numADCSamples = 200; % number of ADC samples per chirp
 numADCBits = 16;     % number of ADC bits per sample
@@ -55,7 +72,7 @@ if isReal
     LVDS = reshape(adcData, numADCSamples*numRX, numChirps);
     %each row is data from one chirp
     LVDS = LVDS.';
-else
+else % 本程序走该分支
     numChirps = fileSize/2/numADCSamples/numRX;     % 含有实部虚部除以2，为2048
     LVDS = zeros(1, fileSize/2);
     %combine real and imaginary part into complex data
@@ -74,8 +91,8 @@ end
 
 %% 重组数据
 adcData = zeros(numRX,numChirps*numADCSamples);     % size:(4*409600)
-for row = 1:numRX           % 填充行
-    for i = 1: numChirps    % 填充列
+for row = 1:numRX           % 填充4行
+    for i = 1: numChirps    % 填充2048列
         % adcData每次填充200个数据：1-200, 201-400...
         % LVDS每行的数据：1-200, 201-400, 401-600, 601-800
         adcData(row, (i-1)*numADCSamples+1:i*numADCSamples) = LVDS(i, (row-1)*numADCSamples+1:row*numADCSamples);
@@ -83,19 +100,21 @@ for row = 1:numRX           % 填充行
 end
 
 % 200*2048
-retVal = reshape(adcData(1, :), numADCSamples, numChirps); %取第二?个接收天线数据，数据存储方式为一个chirp一列
+retVal = reshape(adcData(1, :), numADCSamples, numChirps); %取第二个接收天线数据，数据存储方式为一个chirp一列
 
-% 200*1024, 为什么只取一半数据, 就是第二个接收天线数据?
+%IWR1642为2T4R 但只用了TX1 一个通道即为1T4R:2*200*1024=200* 2048,如果用TX1和 TX2则为2T4R:4*200*1024=200*4096
+% 200*1024, 1T4R只取一半列数据
 process_adc = zeros(numADCSamples, numChirps/2);
-
 for nchirp = 1:2:numChirps  %1T4R 
     process_adc(:, (nchirp-1)/2+1) = retVal(:,nchirp);
 end
 
 %% 距离维FFT（1个chirp)
+% 为了减少图像显示,暂时注释掉
+% 若目标距离1.5m，则在1.5m处会出现一个峰值
 %{
 figure;
-plot((1:numADCSamples)*delta_R, db(abs(fft(process_adc(:,1)))));
+plot((1:numADCSamples)*delta_R, db(abs(fft(process_adc(:,1))))); % 在2048个chip中取第1个
 xlabel('距离（m）');
 ylabel('幅度(dB)');
 title('Fig.1.距离维FFT（1个chirp）');
@@ -105,7 +124,16 @@ plot(db(abs(fft(process_adc(:,1)))))
 xlabel('样点数');
 ylabel('幅度(dB)');
 title('Fig.2.距离维FFT（1个chirp）');
+
+figure;
+plot(real(process_adc(:,1)),'b');
+hold on;
+plot(imag(process_adc(:,1)),'r')
+xlabel('样点数');
+ylabel('幅度');
+title('Fig.2-1.一个chirp时域');
 %}
+
 %% 相位解缠绕部分
 RangFFT = 256;      % 距离维FFT点数
 fft_data_last = zeros(1, RangFFT); 
@@ -115,13 +143,13 @@ numChirps = size(adcdata, 2);   % 1024
 
 %% 距离维FFT
 
-fft_data = fft(adcdata, RangFFT);   % 200*1024, 256->256*1024
+fft_data = fft(adcdata, RangFFT);   % 200*1024->256*1024
 fft_data = fft_data.';              % 1024*256
 
 for ii = 1 : numChirps-1            % 滑动对消，少了一个脉冲。但fft_data维度不变
      fft_data(ii,:) = fft_data(ii+1,:)-fft_data(ii,:);
 end
-
+% 1024*256
 fft_data_abs = abs(fft_data);
 fft_data_abs(:,1:10) = 0;           % 去除直流分量, 为什么是1:10?
 
