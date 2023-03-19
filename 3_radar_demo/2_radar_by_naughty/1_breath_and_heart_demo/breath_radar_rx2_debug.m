@@ -48,6 +48,7 @@ t_frame = 0.05;         % 慢时间轴采样20Hz
 
 %% 读取Bin文件
 %文件名 用户需要按照自己的文件名修改
+Filename = 'data_git/one_1.5m_common_1.bin';           % 单人1米慢速呼吸数据
 % Filename = 'data/data_one_1m_slow/one_1m_slow_1.bin';           % 单人1米慢速呼吸数据
 % Filename = 'data/data_one_1p5m_comm/one_1.5m_common_1.bin';   % 单人1.5米正常呼吸数据
 % Filename = 'data/data_one_1p5m_fast/one_1.5m_fast_1.bin';       % 单人1.5米快速呼吸数据
