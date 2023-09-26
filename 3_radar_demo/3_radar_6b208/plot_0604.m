@@ -4,7 +4,7 @@ figure;
 %% ========================================================================
 clc;
 clear;
-close;
+close all;
 % 疑问：
 
 %% 读取数据部分
@@ -21,7 +21,8 @@ ts = numADCSamples/Fs;  % ADC采样时间
 % slope = B_valid / ts; % 调频斜率2.5e11
 B_valid = 0.25e9;       % 有效带宽,24.00-24.25GHz,250MHz
 delta_R = c/(2*B_valid);% 距离分辨率,0.6m
-t_frame = 0.05;         % 慢时间轴采样20Hz
+% t_frame = 0.05;         % 慢时间轴采样20Hz（抽样50倍）
+t_frame = 0.001;         % 慢时间轴采样1kHz
 
 n = 3000;     % 在N个chip中取第n个chirp并显示,50
 %%
@@ -59,9 +60,12 @@ numChirps = size(adcData_matrix, 2);   % 1024
 %% 距离维FFT
 fft_data = fft(adcData_matrix, RangFFT);   % 200*1024->256*1024
 fft_data = fft_data.';              % 1024*256
-for ii = 1 : numChirps-1            % 滑动对消，少了一个脉冲。但fft_data维度不变
-     fft_data(ii,:) = fft_data(ii+1,:)-fft_data(ii,:);
-end
+
+% 滑动对消，导致峰值出现在2.4m，而不是0.6m，为什么要有这个操作？
+% for ii = 1 : numChirps-1            % 滑动对消，少了一个脉冲。但fft_data维度不变
+%      fft_data(ii,:) = fft_data(ii+1,:)-fft_data(ii,:);
+% end
+
 % 1024*256
 fft_data_abs = abs(fft_data);
 % fft_data_abs(:,1:10) = 0;           % 为什么去除直流分量, 为什么是前10个%
@@ -108,6 +112,32 @@ xlabel('距离（m）');
 ylabel('幅度');
 grid on;
 title('Fig.2-2.非相干积累256点距离维FFT');
+
+%% 进行相位解缠  
+% phase unwrapping(手动解)，自动解可以采用MATLAB自带的函数unwrap()
+n = 1;
+for i = 1+1 : numChirps
+    diff = angle_fft_last(i) - angle_fft_last(i-1);
+    if diff > pi
+        angle_fft_last(i:end) = angle_fft_last(i:end) - 2*pi;
+        n = n + 1;
+    elseif diff < -pi
+        angle_fft_last(i:end) = angle_fft_last(i:end) + 2*pi;  
+    end
+end
+
+figure
+plot((1:numChirps)*t_frame, angle_fft_last_origin);
+xlabel('时间（s）');
+ylabel('相位');
+title('fig3-1.原始相位');
+
+figure
+plot((1:numChirps)*t_frame, angle_fft_last);
+xlabel('时间（s）');
+ylabel('相位');
+grid on
+title('fig3-2.解缠绕后相位');
 
 %%
 toc
