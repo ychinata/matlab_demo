@@ -5,7 +5,7 @@ tic
 %% ========================================================================
 clc;
 clear;
-close;
+close all;
 % 疑问：
 % 1.调制频率设置为1kHz会不会不够?即一个chirp为1ms会不会太长
 % 2.距离分辨率,0.6m，会不会太大不能用？移动身体的位置到0.6m处?或者移动到其它位置试下
@@ -91,6 +91,10 @@ gap = 1;
 for nchirp = 1:gap:numChirps  %1T4R 
     process_adc(:, (nchirp-1)/gap+1) = retVal(:,nchirp);
 end
+% 保存数据
+save('process_adc_50x.mat','process_adc'); 
+% save process_adc.txt -ascii process_adc
+% save process_adc.mat process_adc
 
 %% 距离维FFT（1个chirp)
 % 为了减少图像显示,暂时注释掉

@@ -5,7 +5,7 @@ tic
 %% ========================================================================
 clc;
 clear;
-close;
+close all;
 % 疑问：
 
 %% 读取数据部分
@@ -22,7 +22,7 @@ ts = numADCSamples/Fs;  % ADC采样时间
 % slope = B_valid / ts; % 调频斜率2.5e11
 B_valid = 0.25e9;       % 有效带宽,24.00-24.25GHz,250MHz
 delta_R = c/(2*B_valid);% 距离分辨率,0.6m
-t_frame = 0.05;         % 慢时间轴采样20Hz
+t_frame = 0.001;         % 慢时间轴采样20Hz
 
 %% 读取Bin文件 2023.4.28
 % txt数据格式：
@@ -34,17 +34,17 @@ t_frame = 0.05;         % 慢时间轴采样20Hz
 % 0.01600	2630.92	2221.07
 %%
 % 20230428
-% filename = 'data/0403-1_ds-338750.txt';     % 抽样50倍的数据
-% adcDataRaw = importdata(filename);
+filename = 'data/0403-1_ds-338750.txt';     % 抽样50倍的数据
+adcDataRaw = importdata(filename);
 % x_ds = adcDataRaw(:, 1);
 % y_ids = adcDataRaw(:, 2);
 % y_qds = adcDataRaw(:, 3);
 
 % 20230603
-filename = 'data/0403-1.txt';     % 原始数据
-rawdata = importdata(filename);
-adcDataRaw_ori = rawdata.data;
-adcDataRaw = adcDataRaw_ori(1:1e6, :);                 % 对于不抽样数据，则先取前1M个数据-20230603
+% filename = 'data/0403-1.txt';     % 原始数据
+% rawdata = importdata(filename);
+% adcDataRaw_ori = rawdata.data;
+% adcDataRaw = adcDataRaw_ori(1:1e6, :);                 % 对于不抽样数据，则先取前1M个数据-20230603
 
 %% 若设置的ADC位宽超过xbit，则进行截取处理：忽略这一步
 % 排列IQ数据

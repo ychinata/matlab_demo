@@ -123,7 +123,7 @@ end
 %% 距离维FFT（1个chirp)
 % 为了减少图像显示,暂时注释掉
 % 若目标距离1.5m，则在1.5m处会出现一个峰值
-%{
+% %{
 figure;
 plot((1:numADCSamples)*delta_R, db(abs(fft(process_adc(:,1))))); % 在2048个chip中取第1个
 xlabel('距离（m）');
@@ -143,7 +143,7 @@ plot(imag(process_adc(:,1)),'r')
 xlabel('样点数');
 ylabel('幅度');
 title('Fig.2-1.一个chirp时域');
-%}
+% %}
 
 %% 相位解缠绕部分
 RangFFT = 256;      % 距离维FFT点数

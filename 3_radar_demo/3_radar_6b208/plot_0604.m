@@ -21,14 +21,21 @@ ts = numADCSamples/Fs;  % ADC采样时间
 % slope = B_valid / ts; % 调频斜率2.5e11
 B_valid = 0.25e9;       % 有效带宽,24.00-24.25GHz,250MHz
 delta_R = c/(2*B_valid);% 距离分辨率,0.6m
-% t_frame = 0.05;         % 慢时间轴采样20Hz（抽样50倍）
+
+
+%% 选择adc数据
+load('process_adc_1x.mat')
 t_frame = 0.001;         % 慢时间轴采样1kHz
 
-n = 3000;     % 在N个chip中取第n个chirp并显示,50
-%%
-% save process_adc.txt -ascii process_adc
-% save process_adc.mat process_adc
-load('process_adc.mat')
+% load('process_adc_50x.mat') % 50倍抽样
+% t_frame = 0.05;         % 慢时间轴采样20Hz（抽样50倍）
+
+%% 开始绘图
+[adcNoMax, chirpNoMax] = size(process_adc);
+n = 50;     % 在N个chip中取第n个chirp并显示,原始值50
+if n > chirpNoMax
+    disp('chirp No error!')
+end
 
 % plotSamples = numADCSamples;
 plotSamples = 25;
@@ -46,7 +53,7 @@ hold on;
 plot(imag(process_adc(:,n)),'r')
 xlabel('样点数');
 ylabel('幅度');
-title('Fig.2-1.一个chirp时域');
+title('Fig.2-1.一个chirp时域'); % 将时域数据拼长点，看图像，为什么波动很小
 legend('real','imag')
 
 %% 相位解缠绕部分
