@@ -24,11 +24,15 @@ delta_R = c/(2*B_valid);% 距离分辨率,0.6m
 
 
 %% 选择adc数据
-load('process_adc_1x.mat')
+
+% filename = 'process_adc_50x.mat';
+% t_frame = 0.05;         % 慢时间轴采样20Hz（抽样50倍）
+
+filename = 'process_adc_1x.mat';
 t_frame = 0.001;         % 慢时间轴采样1kHz
 
-% load('process_adc_50x.mat') % 50倍抽样
-% t_frame = 0.05;         % 慢时间轴采样20Hz（抽样50倍）
+load(filename) % 50倍抽样
+
 
 %% 开始绘图
 [adcNoMax, chirpNoMax] = size(process_adc);
@@ -145,6 +149,96 @@ xlabel('时间（s）');
 ylabel('相位');
 grid on
 title('fig3-2.解缠绕后相位');
+
+%% phase difference 相位差分后的数据
+angle_fft_last2 = zeros(1,numChirps);       % rename: angle_fft_diff
+for i = 1 : numChirps-1
+    angle_fft_last2(i) = angle_fft_last(i+1) - angle_fft_last(i);
+    angle_fft_last2(numChirps) = angle_fft_last(numChirps) - angle_fft_last(numChirps-1);
+end
+
+figure;
+plot(angle_fft_last2);
+xlabel('点数（N）');
+ylabel('相位');
+title('fig.3-3.相位差分后的结果');
+
+%%  IIR带通滤波 Bandpass Filter 0.1-0.6hz，得到呼吸的数据
+fs = 20;                %呼吸心跳信号采样率
+COE1 = chebyshev_IIR;   %采用fdatool生成函数，如何生成?
+% save coe1.mat COE1;
+breath_data = filter(COE1, angle_fft_last2);
+
+figure;
+plot(breath_data);
+xlabel('时间/点数');
+ylabel('幅度');
+title('fig4.呼吸时域波形');  % 为什么可以画相位的时域波形?
+
+%% FFT谱估计 -Peak interval
+N1 = length(breath_data);                               % 1024
+fshift = (-N1/2:N1/2-1) * (fs/N1);                      % zero-centered frequency
+breath_data_freq = abs(fftshift(fft(breath_data)));     % 对呼吸相位做FFT
+
+figure;
+% subplot(2,1,1)
+plot(fshift, breath_data_freq);
+xlabel('频率（f/Hz）');
+ylabel('幅度');
+title('fig5.呼吸相位信号FFT with shift');
+
+breath_freq_max = 0;                        % 呼吸频率
+for i = 1:length(breath_data_freq)          % 呼吸相位频域数据,谱峰最大值搜索,1024点
+    if (breath_data_freq(i) > breath_freq_max)
+        breath_freq_max = breath_data_freq(i);
+        breath_index = i;
+    end
+end
+
+% 此函数也可以实现上述的谱峰最大值搜索
+% [breath_freq_max, breath_index] = max(breath_data_freq);
+%  (512-index)/1024, 对应fshift的频谱
+breath_count = (numChirps/2-(breath_index-1)) *fs/numChirps * 60; %呼吸频率解算，*60转换成每分钟的次数
+
+%% IIR带通滤波 Bandpass Filter 0.8-2hz 得到心跳的数据
+COE2 = chebyshev_IIR2;
+% save coe2.mat COE2;
+heart_data = filter(COE2, angle_fft_last2); 
+figure;
+plot(heart_data);
+xlabel('时间/点数');
+ylabel('幅度');
+title('fig6.心跳相位时域波形');
+
+%% FFT谱估计
+N1 = length(heart_data);
+fshift = (-N1/2:N1/2-1)*(fs/N1); % zero-centered frequency
+heart_fre = abs(fftshift(fft(heart_data))); 
+figure;
+plot(fshift,heart_fre);
+xlabel('频率（f/Hz）');
+ylabel('幅度');
+title('fig7.心跳相位信号FFT');
+
+heart_fre_max = 0; 
+for i = 1:length(heart_fre)/2       % 频谱对称
+    if (heart_fre(i) > heart_fre_max)    
+        heart_fre_max = heart_fre(i);
+        if(heart_fre_max<1e-2)      % 幅度置信 判断是否是存在人的心跳
+            heart_index = 1025;     % 设置为无效值
+        else
+            heart_index=i;
+        end
+    end
+end
+heart_count =(numChirps/2-(heart_index-1)) *fs/numChirps* 60;%心跳频率解算，*60转换成每分钟的次数
+
+%% 
+disp(['数据文件：', filename]);
+fprintf('能量最大点：%.2f (m)\n', max_num*delta_R*numADCSamples/RangFFT);
+disp(['每分钟呼吸次数：',num2str(breath_count), '；心跳次数：',num2str(heart_count)])
+disp(['呼吸频率：',num2str(breath_count/60), '(Hz)；心跳频率：',num2str(heart_count/60), '(Hz)'])
+disp(datetime("now"));
 
 %%
 toc
