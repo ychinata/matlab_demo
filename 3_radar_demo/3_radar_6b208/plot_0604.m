@@ -28,7 +28,8 @@ delta_R = c/(2*B_valid);% 距离分辨率,0.6m
 % filename = 'process_adc_50x.mat';
 % t_frame = 0.05;         % 慢时间轴采样20Hz（抽样50倍）
 
-filename = 'process_adc_1x.mat';
+% filename = 'process_adc_1x_1024.mat';
+filename = 'data/data_proc/process_adc_1x_1024_1p2_xy.mat';
 t_frame = 0.001;         % 慢时间轴采样1kHz
 
 load(filename) % 50倍抽样
@@ -224,8 +225,8 @@ heart_fre_max = 0;
 for i = 1:length(heart_fre)/2       % 频谱对称
     if (heart_fre(i) > heart_fre_max)    
         heart_fre_max = heart_fre(i);
-        if(heart_fre_max<1e-2)      % 幅度置信 判断是否是存在人的心跳
-            heart_index = 1025;     % 设置为无效值
+        if(heart_fre_max<1e-3)      % 幅度置信 判断是否是存在人的心跳
+            heart_index = 1;     % 设置为无效值
         else
             heart_index=i;
         end
@@ -236,6 +237,8 @@ heart_count =(numChirps/2-(heart_index-1)) *fs/numChirps* 60;%心跳频率解算
 %% 
 disp(['数据文件：', filename]);
 fprintf('能量最大点：%.2f (m)\n', max_num*delta_R*numADCSamples/RangFFT);
+disp(['每分钟正常呼吸：6~36次，正常心跳：48~120次']);
+disp(['本次测试结果：']);
 disp(['每分钟呼吸次数：',num2str(breath_count), '；心跳次数：',num2str(heart_count)])
 disp(['呼吸频率：',num2str(breath_count/60), '(Hz)；心跳频率：',num2str(heart_count/60), '(Hz)'])
 disp(datetime("now"));

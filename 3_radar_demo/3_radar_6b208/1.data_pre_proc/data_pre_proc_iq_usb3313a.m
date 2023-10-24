@@ -15,12 +15,16 @@ USB 3133A数据格式
 2.14045045073721,2.17453720805135
 2.1104667290257,2.16854046370905
 %}
-
+tic;
 clear;
 clc;
+close all;
 
-filename = '../data/20231019/1019_iq_24g_500k_3_1.csv';
-dataRaw = importdata(filename);
+% filename = '../data/20231019/1019_iq_24g_500k_3_1.csv';
+filenameOpen = '../data/data_orig/20231024/1024_500k_1p2m_1_3.csv';
+filenameSave = '../data/data_proc/process_adc_1x_1024_1p2_xy.mat';
+
+dataRaw = importdata(filenameOpen);
 
 freq_s = 250000;
 t_gap = 1 / freq_s;
@@ -107,6 +111,8 @@ for nchirp = 1:gap:numChirps  %1T4R
     process_adc(:, (nchirp-1)/gap+1) = retVal(:,nchirp);
 end
 % 保存数据
-save('process_adc_1x_1019.mat','process_adc'); %250*2306
+% save('process_adc_1x_1019.mat','process_adc'); %250*2306
+save(filenameSave,'process_adc'); %250*2306
 
-
+%%
+toc
